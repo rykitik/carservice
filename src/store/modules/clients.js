@@ -9,14 +9,14 @@ export default {
   actions: {
     async fetch({ commit, rootGetters }) {
       if (!rootGetters['auth/isAdmin']) return;
-      const { data } = await api.get('/appointments');
+      const { data } = await api.get('/clients');
       commit('SET_APPOINTMENTS', data);
     },
     async create(_, appt) {
-      await api.post('/appointments', appt);
+      await api.post('/clients', appt);
     },
     async remove(_, id) {
-      await api.delete(`/appointments/${id}`);
+      await api.delete(`/clients/${id}`);
     }
   }
 };

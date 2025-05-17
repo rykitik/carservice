@@ -1,36 +1,53 @@
 <template>
-  <table class="appointment-table">
-    <thead>
-      <tr>
-        <th>Дата</th>
-        <th>Время</th>
-        <th>Услуга</th>
-        <th>Клиент</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="appointment in appointments" :key="appointment.id">
-        <td>{{ appointment.date }}</td>
-        <td>{{ appointment.time }}</td>
-        <td>{{ findServiceName(appointment.service_id) }}</td>
-        <td>{{ findClientName(appointment.client_id) }}</td>
-        <td><button @click="$emit('delete', appointment.id)">×</button></td>
-      </tr>
-      <tr v-if="!appointments.length">
-        <td colspan="5" class="empty">Нет записей</td>
-      </tr>
-    </tbody>
-  </table>
+  <div>
+    <table class="appointment-table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Время</th>
+          <th>Услуга</th>
+          <th>Клиент</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="appointment in appointments" :key="appointment.id">
+          <td>{{ appointment.date }}</td>
+          <td>{{ appointment.time }}</td>
+          <td>{{ findServiceName(appointment.service_id) }}</td>
+          <td>{{ findClientName(appointment.client_id) }}</td>
+          <td>
+            <button @click="$emit('delete', appointment.id)">×</button>
+          </td>
+        </tr>
+        <tr v-if="appointments.length === 0">
+          <td colspan="5" class="empty">Нет записей</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
 
 <script>
+import { mapState } from 'vuex';
+
 export default {
   name: 'AppointmentTable',
   props: {
-    appointments: { type: Array, default: () => [] },
-    services:     { type: Array, default: () => [] },
-    clients:      { type: Array, default: () => [] }
+    appointments: {
+      type: Array,
+      default: () => []
+    }
+  },
+  computed: {
+    // Подтягиваем список услуг из vuex/services
+    ...mapState('services', {
+      services: state => state.list
+    }),
+    // Подтягиваем список клиентов из vuex/clients
+    ...mapState('clients', {
+      clients: state => state.list
+    })
   },
   methods: {
     findServiceName(id) {
@@ -40,6 +57,15 @@ export default {
     findClientName(id) {
       const c = this.clients.find(x => x.id === id);
       return c ? c.name : '—';
+    }
+  },
+  async created() {
+    // если services или clients еще не загружены — загрузим их
+    if (!this.services.length) {
+      await this.$store.dispatch('services/fetch');
+    }
+    if (!this.clients.length) {
+      await this.$store.dispatch('clients/fetch');
     }
   }
 };

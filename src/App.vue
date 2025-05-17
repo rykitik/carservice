@@ -6,7 +6,7 @@
       <router-link to="/appointments" v-if="isAuth">Запись</router-link>
       <router-link to="/admin" v-if="isAdmin">Админка</router-link>
 
-      <span v-if="isAuth">{{ user.name }}</span>
+      <span v-if="isAuth && user?.name">{{ user.name }}</span>
       <router-link to="/login" v-if="!isAuth">Вход</router-link>
       <router-link to="/register" v-if="!isAuth">Регистрация</router-link>
 

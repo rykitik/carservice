@@ -6,11 +6,6 @@ const routes = [
   { path: '/login', component: () => import('@/pages/Auth/LoginPage.vue') },
   { path: '/register', component: () => import('@/pages/Auth/RegisterPage.vue') },
   { path: '/services', component: () => import('@/pages/Services/ServicesPage.vue') },
-  // { 
-  //   path: '/appointments', 
-  //   component: () => import('@/pages/Appointments/MakeAppointment.vue'),
-  //   meta: { requiresAuth: true } 
-  // },
   {
     path: '/appointments',
     component: () => import('@/pages/Appointments/AppointmentsPage.vue'),
