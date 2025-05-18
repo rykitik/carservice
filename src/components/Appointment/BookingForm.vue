@@ -2,63 +2,36 @@
   <div class="booking-form">
     <h2>Запишитесь на диагностику ходовой части</h2>
 
-    <!-- Шаг 1: Станция -->
+    <select v-model="form.location">
+      <option disabled value="">Выберите станцию</option>
+      <option>Казань, Дементьева, 18</option>
+    </select>
+
     <div>
-      <label>Станция обслуживания</label>
-      <select v-model="form.location">
-        <option v-for="loc in locations" :key="loc.id" :value="loc.address">{{ loc.address }}</option>
+      <label>Дата:</label>
+      <input type="date" v-model="form.date" @change="fetchTimes" />
+    </div>
+
+    <div>
+      <label>Время:</label>
+      <select v-model="form.time">
+        <option v-for="time in availableTimes" :key="time" :value="time">{{ time }}</option>
       </select>
     </div>
 
-    <!-- Шаг 2: Дата и время -->
-    <div>
-      <label>Дата и время</label>
-      <div class="days">
-        <button
-          v-for="(day, idx) in upcomingDays"
-          :key="idx"
-          @click="form.date = day.date"
-          :class="{ active: form.date === day.date }"
-        >{{ day.label }}</button>
-      </div>
-      <div class="times">
-        <button
-          v-for="slot in times"
-          :key="slot"
-          @click="form.time = slot"
-          :class="{ active: form.time === slot }"
-        >{{ slot }}</button>
-      </div>
-    </div>
+    <input v-model="form.car_brand" placeholder="Марка авто" />
+    <input v-model="form.car_model" placeholder="Модель авто" />
+    <input v-model="form.client_name" placeholder="Ваше имя" />
+    <input v-model="form.phone" placeholder="+7 (___) ___ __ __" />
 
-    <!-- Шаг 3: Данные автомобиля -->
-    <div>
-      <label>Марка автомобиля</label>
-      <input v-model="form.carBrand" placeholder="Например, Toyota" />
+    <input v-model="form.promocode" placeholder="Промокод (если есть)" @blur="checkPromocode" />
+    <div v-if="promocodeStatus === true" style="color: green;">Промокод применен</div>
+    <div v-if="promocodeStatus === false" style="color: red;">Промокод недействителен</div>
 
-      <label>Модель автомобиля</label>
-      <input v-model="form.carModel" placeholder="Например, Camry" />
-    </div>
-
-    <!-- Шаг 4: Контакты -->
-    <div>
-      <label>Ваше имя</label>
-      <input v-model="form.name" placeholder="Ваше имя" />
-
-      <label>Телефон</label>
-      <input v-model="form.phone" placeholder="+7 (___) ___ __ __" />
-    </div>
-
-    <!-- Согласие -->
-    <label>
-      <input type="checkbox" v-model="form.bonusConfirmed" />
-      Проинформирован о бонусной программе FIT SERVICE
-    </label>
-
-    <!-- Кнопка -->
     <button @click="submitBooking">Записаться на СТО</button>
   </div>
 </template>
+
 <script>
 export default {
   data() {
@@ -67,66 +40,63 @@ export default {
         location: '',
         date: '',
         time: '',
-        carBrand: '',
-        carModel: '',
-        name: '',
+        car_brand: '',
+        car_model: '',
+        client_name: '',
         phone: '',
-        bonusConfirmed: false
+        promocode: ''
       },
-      locations: [
-        { id: 1, address: 'Казань, Дементьева, 18' }
-      ],
-      times: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00']
+      availableTimes: [],
+      promocodeStatus: null
     };
   },
-  computed: {
-    upcomingDays() {
-      const days = [];
-      const labels = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-      const today = new Date();
-      for (let i = 0; i < 5; i++) {
-        const d = new Date();
-        d.setDate(today.getDate() + i);
-        days.push({
-          label: `${labels[d.getDay()]} ${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}`,
-          date: d.toISOString().split('T')[0]
-        });
-      }
-      return days;
-    }
-  },
   methods: {
-    async submitBooking() {
-      const {
-        location, date, time,
-        carBrand, carModel, name, phone,
-        bonusConfirmed
-      } = this.form;
-
-      // Простейшая валидация
-      if (!location || !date || !time || !carBrand || !carModel || !name || !phone) {
-        return alert('Заполните все поля');
+    async fetchTimes() {
+      if (this.form.date && this.form.location) {
+        const res = await fetch(`/api/appointments/available-times?date=${this.form.date}&location=${this.form.location}`);
+        this.availableTimes = await res.json();
       }
-
-      try {
-        await fetch('/api/appointments', {
+    },
+    async checkPromocode() {
+      if (this.form.promocode.trim() !== '') {
+        const res = await fetch('/api/appointments/check-promocode', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location, date, time,
-            car_brand: carBrand,
-            car_model: carModel,
-            client_name: name,
-            phone,
-            bonus_confirmed: bonusConfirmed
-          })
+          body: JSON.stringify({ code: this.form.promocode })
         });
-        alert('Вы успешно записаны!');
+        const result = await res.json();
+        this.promocodeStatus = result.valid;
+      }
+    },
+    async submitBooking() {
+      try {
+        const res = await fetch('/api/appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form)
+        });
+
+        if (!res.ok) {
+          const { error } = await res.json();
+          alert('Ошибка: ' + error);
+          return;
+        }
+
+        alert('Вы успешно записались!');
       } catch (err) {
-        console.error(err);
-        alert('Ошибка при записи');
+        console.error('Ошибка:', err);
       }
     }
   }
 };
 </script>
+
+<style>
+.booking-form {
+  max-width: 500px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+</style>
